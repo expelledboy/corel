@@ -1,0 +1,14 @@
+%% -*- erlang -*-
+
+{application, corel,
+ [
+  {description, "corel"},
+  {vsn, "semver"},
+  {registered, []},
+  {modules, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.

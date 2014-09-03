@@ -1,0 +1,29 @@
+# os level
+.Trashes
+*.bak
+Desktop.ini
+.DS_Store
+
+# editors
+tags
+TAGS
+*.swp
+*~
+\#*\#
+.\#*
+
+# generated files
+ebin
+deps
+apps/*/ebin
+.eunit
+*.o
+*.beam
+*.plt
+
+# other
+.svn/
+erl_crash.dump
+node/*
+.vagrant/
+.rebar/

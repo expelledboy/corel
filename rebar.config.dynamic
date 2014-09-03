@@ -1,0 +1,16 @@
+%% -*- erlang -*-
+
+{deps, [
+        {rebar_lock_deps_plugin, ".*",
+         {git, "git://github.com/seth/rebar_lock_deps_plugin.git", {branch, "master"}}},
+        {rebar_vsn_plugin, ".*",
+         {git, "git://github.com/erlware/rebar_vsn_plugin.git", {branch, "master"}}},
+        {meck, ".*",
+         {git,"https://github.com/eproxus/meck.git",{tag,"0.8"}}}
+       ]}.
+
+{plugins, [rebar_lock_deps_plugin,rebar_vsn_plugin]}.
+
+{eunit_opts, [verbose]}.
+{cover_enabled,true}.
+{cover_print_enabled, true}.
