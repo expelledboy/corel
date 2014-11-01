@@ -5,6 +5,8 @@ PLT_APPS ?= erts kernel stdlib
 PLT := dialyzer.plt
 REBAR := $(shell which rebar)
 
+-include env.mk
+
 ##------------------------------------------------------------------------------
 ## common targets
 ##------------------------------------------------------------------------------
@@ -14,7 +16,7 @@ REBAR := $(shell which rebar)
 ifeq ($(wildcard deps),)
 all: build
 else
-all: compile test
+all: compile
 endif
 
 clean:
@@ -60,9 +62,13 @@ lock: .git
 	ln -fhs rebar.config.lock rebar.config
 	git add rebar.config rebar.config.lock
 
+
+ALL_COVER_FILES = $(shell find src -type f -name '*.erl' -exec basename {} .erl \;)
+COVER_FILES = $(shell echo $(filter-out $(EXCLUDE_COVER),$(ALL_COVER_FILES)) | tr ' ' ',')
+
 eunit:
 	# running eunit testcases
-	$(REBAR) eunit
+	@$(REBAR) eunit suites=$(COVER_FILES)
 
 typer: $(PLT)
 	@echo "$(INFO) Running typer on src"
