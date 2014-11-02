@@ -1,4 +1,5 @@
 -module(opts).
+-compile({parse_transform, autohelp}).
 
 %% API
 -export([
