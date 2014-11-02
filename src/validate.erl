@@ -19,6 +19,7 @@
          pid_alive/1, pid_alive/2,
          regex/1, regex/2,
          email_address/1, email_address/2,
+         iso_8601/1, iso_8601/2,
          credit_card/1, credit_card/2,
          phone_number/1, phone_number/2
         ]).
@@ -33,6 +34,7 @@
 -define(RE_DISCOVER, "^6(?:011|5[0-9]{2})[0-9]{12}$").
 -define(RE_CREDIT_CARD, "(?:"++?RE_VISA++"|"++?RE_MASTERCARD++"|"++?RE_AMERICAN_EXPRESS++"|"++?RE_DISCOVER++")").
 -define(RE_PHONE_NUMBER, "^(\\(?\\+?[0-9]{2,5}\\)?)?([0-9 ]{2,4}-?){1,3}$").
+-define(RE_ISO8601, "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$").
 
 %% ===================================================================
 %% API
@@ -185,7 +187,7 @@ len(String,[Length]) when is_list(String) ->
         _ -> false
     end;
 len(Input,_) ->
-    throw({not_supported,type_of(Input)}).
+    throw({not_supported,type:which(Input)}).
 
 pid_alive(include) -> [{is_type,pid}].
 pid_alive(PID,[]) when is_pid(PID) ->
@@ -196,6 +198,10 @@ regex(_,[Regex]) when not is_list(Regex) ->
     throw(regex_not_string);
 regex(String,[Regex]) when is_list(String) ->
     match_regex(Regex,String).
+
+iso_8601(include) -> [string].
+iso_8601(String,[]) when is_list(String) ->
+    match_regex(?RE_ISO8601,String).
 
 email_address(include) -> [string].
 email_address(String,[]) when is_list(String) ->
@@ -242,22 +248,6 @@ string_length(String) when is_list(String) ->
             UC = unicode:characters_to_list(list_to_binary(String)),
             length(UC)
     end.
-
-%% TODO change to using type:which/1
-%% @private
-type_of(X) when is_integer(X)   -> integer;
-type_of(X) when is_float(X)     -> float;
-type_of(X) when is_list(X)      -> list;
-type_of(X) when is_tuple(X)     -> tuple;
-type_of(X) when is_binary(X)    -> binary;
-type_of(X) when is_bitstring(X) -> bitstring;
-type_of(X) when is_boolean(X)   -> boolean;
-type_of(X) when is_function(X)  -> function;
-type_of(X) when is_pid(X)       -> pid;
-type_of(X) when is_port(X)      -> port;
-type_of(X) when is_reference(X) -> reference;
-type_of(X) when is_atom(X)      -> atom;
-type_of(_X)                     -> unknown.
 
 %% @private
 match_regex(Regex,String) when is_list(Regex), is_list(String) ->
@@ -320,5 +310,4 @@ match_regex(Regex,String) when is_list(Regex), is_list(String) ->
 %% internal functions
 -spec string_encoding(string()) -> 'ascii' | 'unicode'.
 -spec string_length(string()) -> non_neg_integer().
--spec type_of(_) -> 'atom' | 'bitstring' | 'boolean' | 'float' | 'function' | 'integer' | 'list' | 'pid' | 'port' | 'reference' | 'tuple' | 'unknown'.
 -spec match_regex(string(),string()) -> boolean().

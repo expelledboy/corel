@@ -11,7 +11,7 @@ assert_test() ->
     ?assertError({assert,not_boolean}, corel:assert(fun() -> "term" end,exception)).
 
 timestamp_test() ->
-    Now = {1404,599956,660656},
+    Now = {1414,599956,660656},
     DateTime = calendar:now_to_local_time(Now),
-    ?assertEqual("2014-07-06 00:39:16", corel:timestamp(DateTime)),
-    ?assertEqual("2014-07-06 00:39:16.660656", corel:timestamp(Now)).
+    ?assertEqual(ok, validate:this(corel:timestamp(DateTime),iso_8601)),
+    ?assertEqual(ok, validate:this(corel:timestamp(Now),iso_8601)).
