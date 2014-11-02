@@ -1,3 +1,4 @@
+%% @headerfile "corel.hrl"
 -module(pickle).
 
 %% API

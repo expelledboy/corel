@@ -15,12 +15,14 @@
          validate/1
         ]).
 
+%% @type not_present_error() = {'not_present', list( {'options',opts:type()} , {'key',atom()} )}
+
 %% ===================================================================
 %% API
 %% ===================================================================
 
 %% @doc get values of options
-%% @throws {not_present,[{options,Opts},{key,Option}]}
+%% @throws not_present_error()
 fget(Opts,Option) when is_list(Opts) and is_atom(Option) ->
     corel:assert(validate(Opts),{not_opts,Opts}),
     fget_opt(Opts,Option);
@@ -53,13 +55,13 @@ fget_opt_default(Opts,Option,Default) ->
 %% ===================================================================
 
 %% @doc set value of option
-%% @throws {not_present,[{options,Opts},{key,Option}]}
+%% @throws not_present_error()
 fset(Opts,Option,Value) when is_list(Opts) and is_atom(Option) ->
     corel:assert(validate(Opts),{not_opts,Opts}),
     fset_opt(Opts,Option,Value).
 
 %% @doc using proplist fset values for options
-%% @throws {not_present,[{options,Opts},{key,Option}]}
+%% @throws not_present_error()
 fset(Opts,Options) when is_list(Opts) and is_list(Options) ->
     corel:assert(validate(Opts),{not_opts,Opts}),
     lists:foldl(fun({Option,Value},Acc) -> fset_opt(Acc,Option,Value) end,Opts,Options).
@@ -108,12 +110,12 @@ defined(Opts,Option) when is_list(Opts) and is_atom(Option) ->
         _Defined -> true
     end;
 defined(Opts,Options) when is_list(Opts) and is_list(Options) ->
-    AreDefined = lists:map(fun(Option) -> defined(Opts,Option) end,Opts,Options),
+    AreDefined = lists:map(fun(Option) -> defined(Opts,Option) end,Options),
     lists:all(fun(X) -> X == true end,AreDefined).
 
 %% ===================================================================
 
 validate(List) when is_list(List)->
-    lists:all(fun(X) -> (is_tuple(X) and size(X) =< 2) or is_atom(X) end, List);
+    lists:all(fun(X) -> (is_tuple(X) and (size(X) =< 2)) orelse is_atom(X) end, List);
 validate(_BadArg) ->
     false.

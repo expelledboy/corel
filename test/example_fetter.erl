@@ -31,8 +31,8 @@ validate(Object) ->
     Username = Object#?MODULE.username,
     Password = Object#?MODULE.password,
     ReversePassword = lists:reverse(Password),
-    Pay2MeActive = params:fget(Object#?MODULE.services,pay2me),
-    ValuITDefined = params:defined(Object#?MODULE.services,valueit),
+    Pay2MeActive = opts:fget(Object#?MODULE.services,pay2me),
+    ValuITDefined = opts:defined(Object#?MODULE.services,valueit),
     if
         Username == Password -> false;
         Username == ReversePassword -> false;

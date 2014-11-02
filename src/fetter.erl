@@ -189,8 +189,8 @@ to_xml(Record) ->
     to_xml(Record,[{fields,Fields}]).
 
 to_xml(Record,Options) when is_tuple(Record) and is_list(Options) ->
-    Fields = params:fget(Options,fields),
-    Format = params:fget(Options,format,simple),
+    Fields = opts:fget(Options,fields),
+    Format = opts:fget(Options,format,simple),
     to_xml(Format,Record,Fields).
 
 to_xml(simple,Record,Fields) when is_list(Fields) ->

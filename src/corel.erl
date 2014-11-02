@@ -24,7 +24,10 @@ assert(Fun,Exception) when is_function(Fun) ->
         true -> ok;
         false -> throw(Exception);
         _ -> error({assert,not_boolean})
-    end.
+    end;
+
+assert(true, _) -> ok;
+assert(false,Exception) -> throw(Exception).
 
 timestamp() ->
     timestamp(os:timestamp()).

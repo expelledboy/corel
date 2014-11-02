@@ -14,6 +14,7 @@ TAGS
 
 # generated files
 ebin
+doc
 deps
 apps/*/ebin
 .eunit

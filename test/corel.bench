@@ -1,0 +1,10 @@
+{mode, max}.
+{concurrent, 5}.
+{duration, 1}.
+
+{operations, [{ping, 10}]}.
+
+{driver, corel_bench}.
+{code_paths, ["."]}.
+
+{report_interval, 5}.

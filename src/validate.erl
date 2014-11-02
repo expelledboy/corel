@@ -1,18 +1,9 @@
 -module(validate).
 
--ifdef(TEST).
--compile(export_all).
--define(process(Input,Validations,_), ?MODULE:process(Input,Validations,ok)).
--else.
--define(process(Input,Validations,_), process(Input,Validations,ok)).
--endif.
-
 %% API
--export([
-         this/2
-        ]).
+-export([ this/2 ]).
 
-%% Validations
+%% validations
 -export([
          defined/2,
          has_value/2,
@@ -31,6 +22,9 @@
          credit_card/1, credit_card/2,
          phone_number/1, phone_number/2
         ]).
+
+%% private exports
+-export([ process/3 ]).
 
 -define(RE_EMAIL, "^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+(?:[a-zA-Z]{2}|com|org|net|edu|gov|mil|biz|info|mobi|name|aero|asia|jobs|museum)$").
 -define(RE_VISA, "^4[0-9]{12}(?:[0-9]{3})?$").
@@ -51,7 +45,7 @@ this(Input, Validations) when is_list(Validations) ->
     Included = lists:flatten([ includes(V) || V <- Validations ]),
     Reduced = remove_dups(Included),
     Normalized = lists:flatten([ normalize(V) || V <- Reduced ]),
-    ?process(Input, Normalized, ok).
+    process(Input, Normalized, ok).
 
 %% ===================================================================
 

@@ -39,7 +39,7 @@ dist:
 ## custom targets
 ##------------------------------------------------------------------------------
 
-.PHONY: build rebuild compile lock eunit typer dialyzer
+.PHONY: build rebuild compile lock eunit typer dialyzer doc
 
 build: .git deps
 
@@ -70,13 +70,26 @@ eunit:
 	# running eunit testcases
 	@$(REBAR) eunit suites=$(COVER_FILES)
 
+benchmark:
+	# running basho_bench
+	erlc -o ebin test/corel_bench.erl
+	basho_bench --results-dir ebin test/corel.bench
+	summary.r -i ebin/current
+	# results:
+	@cat ebin/current/summary.csv
+	# image: ebin/current/summary.png
+
 typer: $(PLT)
 	@echo "$(INFO) Running typer on src"
 	typer --plt $(PLT) -r ./src
 
 dialyzer: $(PLT) compile
 	# running dialyzer on ebin
-	@dialyzer --fullpath --plt $(PLT) -r ./ebin -Wrace_conditions
+	@dialyzer --fullpath --plt $(PLT) -r ./ebin -Wrace_conditions | \
+		fgrep -v -f ./.dialyzer.ignore
+
+doc:
+	$(REBAR) doc
 
 ##------------------------------------------------------------------------------
 ## real targets
