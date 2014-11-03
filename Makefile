@@ -68,7 +68,7 @@ COVER_FILES = $(shell echo $(filter-out $(EXCLUDE_COVER),$(ALL_COVER_FILES)) | t
 
 eunit:
 	# running eunit testcases
-	@$(REBAR) eunit suites=$(COVER_FILES)
+	@$(REBAR) eunit -D NODEBUG suites=$(COVER_FILES)
 
 benchmark:
 	# running basho_bench

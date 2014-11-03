@@ -16,4 +16,5 @@ exec erl \
   -pa $REPO/deps/*/ebin \
   -pa $REPO/apps/*/ebin \
   -eval '[code:ensure_loaded(list_to_atom(filename:rootname(filename:basename(F)))) || F <- filelib:wildcard("../ebin/*.beam")].' \
-  -args_file $REPO/node/system.args
+  -args_file $REPO/node/system.args \
+  -s sync
