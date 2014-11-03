@@ -1,3 +1,7 @@
+%% @copyright Anthony Jackson <expelledboy> All Rights Reserved
+%% This file is subject to the terms and conditions defined in
+%% file 'LICENSE.txt', which is part of this source code package.
+
 -module(type_tests).
 -include_lib("eunit/include/eunit.hrl").
 
