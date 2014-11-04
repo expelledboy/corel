@@ -8,7 +8,7 @@
 
 %% API
 -export([ start_link/4, start/4 ]).
--export([ start/2, handover/3 ]).
+-export([ resolve/2 ]).
 -export([ await/1, await/2 ]).
 
 %% gen callback
@@ -24,7 +24,7 @@
                  name,
                  state_name,
                  state_data,
-                 context,
+                 %% context,
                  message,
                  options }).
 
@@ -44,25 +44,27 @@
 %% ===================================================================
 
 -type name() :: tuple() | atom().
--type context() :: term().
 -type state() :: term().
 -type state_name() :: atom().
+-type challenge() :: term().
 -type reason() :: term().
--type state_change() :: {'commit', state_name(), state()}.
+-type state_change() :: {'commit', state_name(), state()} | {'ok', state_name(), state()}.
 
--callback context(state_name(),state()) -> {'ok', context()}.
--callback recover(context()) -> state_change() | {'error',reason()}.
--callback commit(context()) -> 'ok'.
+-callback init(term()) -> {'ok', state()}.
+-callback recover(state()) -> state_change() | {'error',reason()}.
+-callback commit(state_name(),state()) -> 'ok'.
 
--callback handover(context(), state_name(), state()) -> boolean().
--callback resolve(name(), pid(), pid()) -> pid().
--callback terminate(reason(), state_name(), state()) -> 'ok'.
+-callback challenge(state()) -> {'ok',challenge()}.
+-callback resolve(challenge(), state_name(), state()) -> boolean().
+-callback conflict(name(), pid(), pid()) -> pid().
+-callback terminate(reason(), state_name(), state()) -> {'commit', state_name(), state()} | 'ok'. 
 
+call_init(S) -> (?mod(S)):init(?data(S)).
+call_challenge(S) -> (?mod(S)):challenge(?data(S)).
 call_info(Info,S) -> (?mod(S)):(?act(S))(Info, ?data(S)).
-call_context(S) -> (?mod(S)):context(?act(S),?data(S)).
-call_recover(S) -> (?mod(S)):recover(?cxt(S)).
-call_commit(S) -> (?mod(S)):commit(?cxt(S)).
-call_handover(RContext,S) -> (?mod(S)):handover(RContext, ?act(S), ?data(S)).
+call_recover(S) -> (?mod(S)):recover(?data(S)).
+call_commit(S) -> (?mod(S)):commit(?act(S),?data(S)).
+call_resolve(Challenge,S) -> (?mod(S)):resolve(Challenge, ?act(S), ?data(S)).
 call_terminate(Reason,S) -> (?mod(S)):terminate(Reason, ?act(S), ?data(S)).
 
 %% ===================================================================
@@ -89,11 +91,8 @@ await(Name,Options) ->
         _ -> throw(poll_not_divisible)
     end.
 
-handover(Pid,RPid,Context) ->
-    callback(Pid,{handover,RPid,Context}).
-
-start(Pid,Context) ->
-    callback(Pid,{start,Context}).
+resolve(Pid,Context) ->
+    callback(Pid,{resolve,Context}).
 
 %% ===================================================================
 
@@ -122,11 +121,11 @@ init_it(Starter, Parent, _Self, Mod, Args, Options) ->
                 state_name = init,
                 state_data = Args,
                 options = Options },
-    case catch call_context(S) of
-        {ok,Context} ->
+    case catch call_init(S) of
+        {ok,StateData} ->
             ?debugMsg("process alive"),
             proc_lib:init_ack(Starter, {ok, self()}),
-            start(S#state{context=Context});
+            start(S#state{state_data=StateData});
         {error, Reason} ->
             proc_lib:init_ack(Starter, {error, Reason}),
             exit(Reason);
@@ -145,35 +144,34 @@ start(S) ->
             ?debugMsg("become leader"),
             recover(S);
         {existing,Pid} ->
-            ?debugMsg("need to resolve"),
-            resolve(Pid,S)
+            ?debugMsg("need to challenge"),
+            MRef = erlang:monitor(process,Pid),
+            challenge(MRef,Pid,S)
     end.
 
 recover(S) ->
     ?debugMsg("recovering state"),
     case catch call_recover(S) of
+        {ok, StateName, StateData} ->
+            leader(S#state{state_name=StateName,state_data=StateData});
         {commit, StateName, StateData} ->
             commit(S#state{state_name=StateName,state_data=StateData});
         Return -> common(Return,S)
     end.
 
-commit(S0) ->
-    ?debugMsg("getting context"),
-    {ok,Context} = call_context(S0),
-    ?debugMsg("commiting context"),
-    S = S0#state{context=Context},
+commit(S) ->
+    ?debugMsg("commiting state"),
     case catch call_commit(S) of
         ok ->
             leader(S);
         Return -> common(Return,S)
     end.
 
-resolve(Pid,S) ->
-    case call_remote(Pid,handover,[self(),?cxt(S)]) of
-        {ok,true} -> shell(S);
-        {ok,false} ->
-            Ref = erlang:monitor(process,Pid),
-            follower(Ref,S)
+challenge(MRef,Pid,S) ->
+    {ok,Challenge} = call_challenge(S),
+    case call_remote(Pid,resolve,[Challenge]) of
+        {ok,true} -> shell(MRef,Pid,S);
+        {ok,false} -> follower(MRef,Pid,S)
     end.
 
 %% ===================================================================
@@ -181,29 +179,28 @@ resolve(Pid,S) ->
 leader(S) ->
     ?debugMsg("leader loop"),
     receive
-        {?MODULE,From, {callback,{handover,RPid,RContext}}} = Msg ->
-            handover(RPid,RContext, From, S#state{message=Msg});
+        {?MODULE,From, {callback,{resolve,Challenge}}} = Msg ->
+            resolve(Challenge, From, S#state{message=Msg});
         Info ->
             info(Info, S#state{message=Info})
     end.
 
-shell(S) ->
+shell(MRef,Pid,S) ->
     ?debugMsg("shell loop"),
     receive
-        {?MODULE, From, {callback,{start,Context}}} = Msg ->
-            gen:reply(From,ok),
-            start(S#state{context=Context,message=Msg});
+        {'DOWN',MRef,process,Pid,handover}=Msg ->
+            start(S#state{message=Msg});
         Info ->
             terminate({unexpected_message, Info}, S#state{message=Info})
     after
         ?NETWORK_TIMEOUT ->
-            terminate(timeout_during_handover, S)
+            terminate({timeout,handover}, S)
     end.
 
-follower(Ref,S) ->
+follower(MRef,Pid,S) ->
     ?debugMsg("follower loop"),
     receive
-        {'DOWN',Ref,process,_From,_Reason}=Msg ->
+        {'DOWN',MRef,process,Pid,_Reason}=Msg ->
             start(S#state{message=Msg});
         Info ->
             terminate({unexpected_message, Info}, S#state{message=Info})
@@ -221,17 +218,29 @@ info(Info, S) ->
         Return -> common(Return,S)
     end.
 
-handover(RPid, RContext,From,S) ->
-    case catch call_handover(RContext,S) of
+resolve(Challenge,From,S) ->
+    case catch call_resolve(Challenge,S) of
         true ->
-            ok = global:unregister_name(?name(S)),
             gen:reply(From,true),
-            terminate({handover,RPid},S);
+            terminate(handover,S);
         false ->
             gen:reply(From,false),
             leader(S);
         Return ->
             common(Return,S)
+    end.
+
+terminate(Reason, S) ->
+    ?debugFmt("terminate ~p",[Reason]),
+    case catch call_terminate(Reason,S) of
+        {commit, StateName, StateData} ->
+            ok = call_commit(S#state{state_name=StateName,state_data=StateData}),
+            exit(Reason);
+        {'EXIT', What} ->
+            fatal(What, S),
+            exit(What);
+        _ ->
+            exit(Reason)
     end.
 
 common(Return,S) ->
@@ -240,24 +249,6 @@ common(Return,S) ->
         {stop, Reason, StateData} -> terminate(Reason, S#state{state_data=StateData});
         {'EXIT', What} -> terminate(What, S);
         _ -> terminate({bad_return_value, Return}, S)
-    end.
-
-terminate({handover,Pid}, S) ->
-    ?debugMsg("doing handover"),
-    case catch call_context(S) of
-        {ok, Context} ->
-            ok = call_remote(Pid,start,[Context]),
-            terminate(handover,S);
-        Return -> common(Return,S)
-    end;
-
-terminate(Reason, S) ->
-    case catch call_terminate(Reason,S) of
-        {'EXIT', What} ->
-            fatal(What, S),
-            exit(What);
-        _ ->
-            exit(Reason)
     end.
 
 %% ===================================================================
@@ -271,7 +262,7 @@ fatal(What, S) ->
 
 register_name(Name, S) ->
     Mod = ?mod(S),
-    case global:register_name(Name, self(), fun Mod:resolve/3) of
+    case global:register_name(Name, self(), fun Mod:conflict/3) of
         yes -> true;
         no ->
             case global:whereis_name(Name) of
