@@ -168,7 +168,7 @@ commit(S) ->
     end.
 
 challenge(MRef,Pid,S) ->
-    {ok,Challenge} = call_challenge(S),
+    Challenge = call_challenge(S),
     case call_remote(Pid,resolve,[Challenge]) of
         {ok,true} -> shell(MRef,Pid,S);
         {ok,false} -> follower(MRef,Pid,S)

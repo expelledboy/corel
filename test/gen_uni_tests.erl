@@ -17,7 +17,6 @@ basic_failover_test() ->
 
     %% start leader
     ?mock(init,fun([]) -> {ok,{state,leader}} end),
-    ?mock(init,fun([]) -> {ok,{state,leader}} end),
     ?mock(recover,fun({state,leader}) -> {commit,state_name,{state,leader}} end),
     ?mock(commit,fun(state_name,{state,leader}) -> ok end),
     {ok,Leader1} = gen_uni:start(?name, ?mod, Args, Options),
