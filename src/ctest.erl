@@ -41,9 +41,9 @@ after_exit(Fun) when is_function(Fun,0)->
                   end
               catch
                   error:{badmatch,{after_exit,Res}} ->
-                      error_logger:error_msg("** error ctest:after_exit(fun ~s) -> ~p~n",[mfa_string(Fun),Res]);
+                      error_logger:error_msg("** ctest:after_exit(fun ~s) -> ~p~n",[mfa_string(Fun),Res]);
                   Class:Error ->
-                      error_logger:error_msg("** error ctest:after_exit(fun ~s) -> ~p(~p)~n",[mfa_string(Fun),Class,Error])
+                      error_logger:error_msg("** ctest:after_exit(fun ~s) -> ~p(~p)~n",[mfa_string(Fun),Class,Error])
               end
       end),
     ok.
@@ -59,9 +59,13 @@ setup() ->
     ok = set_env(?MODULE,test_pid,From).
 
 call(Tag,Msg,Timeout) ->
-    case application:get_env(?MODULE,test_pid) of
-        {ok,TestPid} when is_pid(TestPid) ->
-            gen:call(TestPid,Tag,Msg,Timeout)
+    try
+        {ok,TestPid} = application:get_env(?MODULE,test_pid),
+        gen:call(TestPid,Tag,Msg,Timeout)
+    catch
+        exit:timeout ->
+            error_logger:error_msg("** ctest:call(~p,~p,~p) -> throw(timeout)~n",[Tag,Msg,Timeout]),
+            error({ctest,timeout})
     end.
 
 cast(Tag,Msg) ->
@@ -76,8 +80,14 @@ recv(Tag,Timeout) ->
         {Tag,From,Msg} -> {From,Msg}
     after
         Timeout ->
-            receive Msg -> error({bad_message,Msg})
-            after 0 -> error(timeout)
+            receive
+                Msg ->
+                    error_logger:error_msg("** ctest:recv(~p,~p) -> ~p % bad_message~n",[Tag,Timeout,Msg]),
+                    error({bad_message,Msg})
+            after
+                0 ->
+                    error_logger:error_msg("** ctest:recv(~p,~p) -> throw(timeout)~n",[Tag,Timeout]),
+                    error({ctest,timeout})
             end
     end.
 
