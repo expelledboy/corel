@@ -10,15 +10,15 @@
 %% entry point of processing
 %% based on event decide to change state or execute action
 %% should be side effect free
--callback event(StateObject::term(), Event::term()) -> 'ok' | tuple('action'|'change', term()).
+-callback event(StateObject::term(), Event::term()) -> 'ok' | {'action'|'change', term()}.
 
 %% process task and generate events
 %% can also shortcut to state change
--callback action(StateObject::term(), Action::term()) -> 'ok' | tuple('event'|'change', term()).
+-callback action(StateObject::term(), Action::term()) -> 'ok' | {'event'|'change', term()}.
 
 %% the end of processing
 %% only point at which state can be changed
--callback change(StateObject::term(), Change::term()) -> tuple('ok', NewStateObject::term()).
+-callback change(StateObject::term(), Change::term()) -> {'ok', NewStateObject::term()}.
 
 %% ===================================================================
 %% API
